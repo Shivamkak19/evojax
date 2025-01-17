@@ -27,7 +27,7 @@ def parse_args():
     parser.add_argument(
         "--max-conns",
         type=int,
-        default=200,
+        default=2000,
         help="Maximum connections in NEAT network.",
     )
     parser.add_argument(
@@ -151,7 +151,7 @@ def get_wandb_logging_function(wandb_run, policy, solver):
     def log_network_info(iteration: int, stage: str):
         """Helper function to log network visualization and metrics"""
         try:
-            print("GATE 0")
+            # print("GATE 0")
             # Get best network structure
             idx = solver.best_params[0]
             nodes = solver.current_nodes[idx]
@@ -180,7 +180,7 @@ def get_wandb_logging_function(wandb_run, policy, solver):
             
             # Create and log network visualization
             try:
-                print("GATE 1")
+                # print("GATE 1")
 
                 # Use tensorneat's built-in visualization
                 policy.genome.visualize(
@@ -194,7 +194,7 @@ def get_wandb_logging_function(wandb_run, policy, solver):
                 wandb_run.log({
                     f"{stage}/network_graph": wandb.Image(f"temp_network_{stage}_{iteration}.png")
                 })
-                print("GATE 2")
+                # print("GATE 2")
 
                 # Cleanup temporary file
                 import os
@@ -210,7 +210,7 @@ def get_wandb_logging_function(wandb_run, policy, solver):
         if wandb_run is not None:
             # Original score logging
 
-            print("GATE -2")
+            # print("GATE -2")
             wandb_run.log({
                 "iteration": iteration,
                 f"{stage}/score_min": float(scores.min()),
@@ -219,7 +219,7 @@ def get_wandb_logging_function(wandb_run, policy, solver):
                 f"{stage}/score_std": float(scores.std()),
             })
 
-            print("GATE -1")
+            # print("GATE -1")
             
             # Log network info for both train and test
             log_network_info(iteration, stage)
@@ -229,7 +229,7 @@ def get_wandb_logging_function(wandb_run, policy, solver):
 def save_visualization(
     task_state, policy, solver, max_steps, log_dir, wandb_run=None, iteration=None
 ):
-    print("VIDEO GATE 0")
+    # print("VIDEO GATE 0")
     """Generates and saves visualization of the trained policy.
 
     Args:
@@ -266,7 +266,7 @@ def save_visualization(
         if done:
             break
 
-    print("VIDEO GATE 1")
+    # print("VIDEO GATE 1")
     # Create descriptive filename with metrics
     iter_str = f"_iter{iteration}" if iteration is not None else ""
     gif_name = f"slimevolley{iter_str}_r{total_reward:.1f}_s{steps_survived}.gif"
@@ -279,7 +279,7 @@ def save_visualization(
     # Log to wandb if available
     if wandb_run is not None:
         try:
-            print("VIDEO GATE 2")
+            # print("VIDEO GATE 2")
             # Log the GIF with metrics
             wandb_run.log(
                 {
@@ -394,16 +394,16 @@ def main(config):
 
     gif_file = save_visualization(test_task, policy, solver, max_steps, log_dir)
 
-    print("MAIN GATE 1")
+    # print("MAIN GATE 1")
     logger.info(f"GIF saved to {gif_file}")
 
     # Log visualization to wandb
     if run is not None:
         try:
-            print("MAIN GATE 2")
+            # print("MAIN GATE 2")
             wandb.log({"visualization": wandb.Image(gif_file)})
             run.finish()
-            print("MAIN GATE 3")
+            # print("MAIN GATE 3")
         except Exception as e:
             print(f"Warning: Failed to log visualization to W&B: {str(e)}")
 

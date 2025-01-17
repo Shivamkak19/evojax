@@ -28,34 +28,55 @@ class NEATPolicy(PolicyNetwork):
         max_conns: int = 200,
         logger=None,
     ):
-        # Previous initialization code remains the same
         self.input_dim = input_dim
         self.output_dim = output_dim
         self._logger = logger or create_logger("NEATPolicy")
+        
+        # Create initial hidden layer structure
+        init_hidden_layers = (hidden_size, hidden_size//2, hidden_size//4)  # Create multiple hidden layers
+        
         self.genome = DefaultGenome(
             num_inputs=input_dim,
             num_outputs=output_dim,
             max_nodes=max_nodes,
             max_conns=max_conns,
             node_gene=BiasNode(
-                activation_options=ACT.tanh,
-                aggregation_options=AGG.sum,
-                bias_init_std=1.0,
-                bias_mutate_rate=0.3,
-                bias_replace_rate=0.1,
+                # Use more activation functions
+                activation_options=[
+                    ACT.tanh,
+                    ACT.sigmoid,
+                    ACT.relu,
+                    ACT.lelu,
+                    ACT.sin,
+                    ACT.scaled_tanh,
+                    ACT.scaled_sigmoid
+                ],
+                aggregation_options=[
+                    AGG.sum,
+                    AGG.product,
+                    AGG.mean,
+                    AGG.max,
+                    AGG.min
+                ],
+                # Increase mutation rates for more exploration
+                bias_init_std=1.5,
+                bias_mutate_rate=0.4,
+                bias_replace_rate=0.2,
+                activation_replace_rate=0.3  # Increase likelihood of trying different activation functions
             ),
             conn_gene=DefaultConn(
-                weight_init_std=1.0,
-                weight_mutate_rate=0.3,
-                weight_replace_rate=0.1,
+                weight_init_std=1.5,
+                weight_mutate_rate=0.4,
+                weight_replace_rate=0.2,
             ),
             output_transform=ACT.tanh,
+            init_hidden_layers=init_hidden_layers  # Add initial hidden layer structure
         )
+
         self.state = State(randkey=jax.random.PRNGKey(0))
         self.state = self.genome.setup(self.state)
         self.current_nodes = None
         self.current_conns = None
-        # Make genome accessible
         self.genome = self.genome
 
     def set_params(self, nodes, conns):
