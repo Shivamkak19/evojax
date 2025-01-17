@@ -32,7 +32,6 @@ class NEATPolicy(PolicyNetwork):
         self.input_dim = input_dim
         self.output_dim = output_dim
         self._logger = logger or create_logger("NEATPolicy")
-
         self.genome = DefaultGenome(
             num_inputs=input_dim,
             num_outputs=output_dim,
@@ -52,12 +51,10 @@ class NEATPolicy(PolicyNetwork):
             ),
             output_transform=ACT.tanh,
         )
-
         self.state = State(randkey=jax.random.PRNGKey(0))
         self.state = self.genome.setup(self.state)
         self.current_nodes = None
         self.current_conns = None
-
         # Make genome accessible
         self.genome = self.genome
 
@@ -67,7 +64,10 @@ class NEATPolicy(PolicyNetwork):
         self.current_conns = conns
 
     def get_actions(
-        self, t_states: TaskState, params: jnp.ndarray, p_states: PolicyState
+        self,
+        t_states: TaskState,
+        params: jnp.ndarray,
+        p_states: PolicyState
     ) -> Tuple[jnp.ndarray, PolicyState]:
         """Get actions from observations using current parameters."""
         # Reshape observation if needed
@@ -77,7 +77,7 @@ class NEATPolicy(PolicyNetwork):
 
         # Extract index and get network parameters
         idx = jnp.asarray(params[0] if len(params.shape) > 0 else params)
-
+        
         # Instead of dynamic slice, use regular indexing
         nodes = jnp.array(self.current_nodes[idx])
         conns = jnp.array(self.current_conns[idx])
