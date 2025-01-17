@@ -19,37 +19,49 @@ class NEATWrapper(NEAlgorithm):
         pop_size: int = 128,
         species_size: int = 10,
         max_nodes: int = 50,
-        max_conns: int = 200,
+        max_conns: int = 2000,
         seed: int = 0,
     ):
         super().__init__()
         self.pop_size = pop_size
 
-        # Create NEAT algorithm with more varied initialization
+        # Create NEAT algorithm with more speciation
         self.neat = TensorNEAT(
             genome=DefaultGenome(
                 num_inputs=input_dim,
                 num_outputs=output_dim,
                 max_nodes=max_nodes,
                 max_conns=max_conns,
+                init_hidden_layers=(hidden_size, hidden_size//2, hidden_size//4),
                 node_gene=BiasNode(
-                    activation_options=ACT.tanh,
-                    aggregation_options=AGG.sum,
-                    bias_init_std=1.0,  # Increased for more variation
-                    bias_mutate_rate=0.3,  # Increased mutation rate
-                    bias_replace_rate=0.1,
+                    activation_options=[
+                        ACT.tanh, ACT.sigmoid, ACT.relu, 
+                        ACT.lelu, ACT.sin, ACT.scaled_tanh,
+                        ACT.scaled_sigmoid
+                    ],
+                    aggregation_options=[
+                        AGG.sum, AGG.product, AGG.mean, 
+                        AGG.max, AGG.min
+                    ],
+                    bias_init_std=1.5,
+                    bias_mutate_rate=0.4,
+                    bias_replace_rate=0.2,
+                    activation_replace_rate=0.3
                 ),
                 conn_gene=DefaultConn(
-                    weight_init_std=1.0,  # Increased for more variation
-                    weight_mutate_rate=0.3,  # Increased mutation rate
-                    weight_replace_rate=0.1,
+                    weight_init_std=1.5,
+                    weight_mutate_rate=0.4,
+                    weight_replace_rate=0.2,
                 ),
                 output_transform=ACT.tanh,
             ),
             pop_size=pop_size,
             species_size=species_size,
-            survival_threshold=0.2,  # Adjusted for more selection pressure
-            compatibility_threshold=3.0,  # Increased for more speciation
+            survival_threshold=0.2,
+            compatibility_threshold=4.0,
+            species_elitism=2,
+            genome_elitism=2,
+            min_species_size=2
         )
 
         # Initialize state
@@ -58,12 +70,8 @@ class NEATWrapper(NEAlgorithm):
 
         self._best_idx = None
         self.best_fitness = float("-inf")
-
-        # Store current population
         self.current_nodes = None
         self.current_conns = None
-
-        # Reference to policy for parameter updates
         self.policy = None
 
     def ask(self) -> jnp.ndarray:
