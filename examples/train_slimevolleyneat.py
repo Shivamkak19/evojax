@@ -322,6 +322,12 @@ def main(config):
     train_task = SlimeVolley(test=False, max_steps=max_steps)
     test_task = SlimeVolley(test=True, max_steps=max_steps)
 
+    config.pop_size = 128  # Larger population
+    config.hidden_size = 32  # Larger network
+    config.max_nodes = 100  # Allow for growth
+    config.max_conns = 3000  # Allow for more connections
+    config.n_repeats = 16   # More evaluation episodes
+
     # Create NEAT policy
     policy = NEATPolicy(
         input_dim=train_task.obs_shape[0],
@@ -344,6 +350,9 @@ def main(config):
         seed=config.seed,
     )
 
+    # Connect policy and solver
+    solver.set_policy(policy)
+
     # Create trainer with wandb logging
     trainer = Trainer(
         policy=policy,
@@ -363,8 +372,8 @@ def main(config):
         log_scores_fn=get_wandb_logging_function(run, policy, solver),
     )
 
-    # Connect policy and solver
-    solver.set_policy(policy)
+
+
 
     # Train
     best_score = trainer.run(demo_mode=False)

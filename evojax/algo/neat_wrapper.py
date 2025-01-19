@@ -11,63 +11,40 @@ from tensorneat.src.tensorneat.common import ACT, AGG
 
 
 class NEATWrapper(NEAlgorithm):
-    def __init__(
-        self,
-        input_dim: int,
-        output_dim: int,
-        hidden_size: int = 20,
-        pop_size: int = 128,
-        species_size: int = 10,
-        max_nodes: int = 50,
-        max_conns: int = 2000,
-        seed: int = 0,
-    ):
+    def __init__(self, input_dim, output_dim, pop_size=128, hidden_size=20, 
+                 species_size=10, max_nodes=50, max_conns=200, seed=0):
         super().__init__()
         self.pop_size = pop_size
 
-        # Create NEAT algorithm with more speciation
+        # Configure NEAT specifically for slimevolley
         self.neat = TensorNEAT(
             genome=DefaultGenome(
-                num_inputs=input_dim,
-                num_outputs=output_dim,
+                num_inputs=input_dim, 
+                num_outputs=output_dim,  # Should be 3 for slimevolley
                 max_nodes=max_nodes,
-                max_conns=max_conns,
-                init_hidden_layers=(hidden_size, hidden_size//2, hidden_size//4),
+                max_conns=max_conns, 
+                init_hidden_layers=(hidden_size, hidden_size//2),
                 node_gene=BiasNode(
-                    activation_options=[
-                        ACT.tanh, ACT.sigmoid, ACT.relu, 
-                        ACT.lelu, ACT.sin, ACT.scaled_tanh,
-                        ACT.scaled_sigmoid
-                    ],
-                    aggregation_options=[
-                        AGG.sum, AGG.product, AGG.mean, 
-                        AGG.max, AGG.min
-                    ],
-                    bias_init_std=1.5,
-                    bias_mutate_rate=0.4,
-                    bias_replace_rate=0.2,
-                    activation_replace_rate=0.3
+                    activation_options=[ACT.tanh, ACT.sigmoid, ACT.relu],
+                    aggregation_options=[AGG.sum],
+                    bias_init_std=1.0,
+                    bias_mutate_rate=0.3,
                 ),
                 conn_gene=DefaultConn(
-                    weight_init_std=1.5,
-                    weight_mutate_rate=0.4,
-                    weight_replace_rate=0.2,
+                    weight_init_std=1.0,
+                    weight_mutate_rate=0.3,
                 ),
-                output_transform=ACT.tanh,
+                output_transform=ACT.tanh,  # Important for control tasks
             ),
             pop_size=pop_size,
             species_size=species_size,
             survival_threshold=0.2,
-            compatibility_threshold=4.0,
-            species_elitism=2,
-            genome_elitism=2,
-            min_species_size=2
+            compatibility_threshold=3.0,
         )
 
-        # Initialize state
-        self.state = State(randkey=jax.random.PRNGKey(seed))
+        self.state = State(randkey=jax.random.PRNGKey(seed)) 
         self.state = self.neat.setup(self.state)
-
+        
         self._best_idx = None
         self.best_fitness = float("-inf")
         self.current_nodes = None
@@ -75,36 +52,32 @@ class NEATWrapper(NEAlgorithm):
         self.policy = None
 
     def ask(self) -> jnp.ndarray:
-        """Get current population parameters."""
-        # Get population from NEAT
+        """Get current population."""
         nodes, conns = self.neat.ask(self.state)
-
-        # Ensure proper shapes
-        nodes = jnp.array(nodes)
-        conns = jnp.array(conns)
-
-        # Store current population with proper shapes
+        
+        # Store current population
         self.current_nodes = nodes
         self.current_conns = conns
-
-        # Update policy's parameters
+        
+        # Update policy if available
         if self.policy is not None:
-            self.policy.set_params(self.current_nodes, self.current_conns)
-
+            self.policy.set_params(nodes, conns)
+            
+        # Return indices into population
         return jnp.arange(self.pop_size)
-
+        
     def tell(self, fitness: Union[np.ndarray, jnp.ndarray]) -> None:
-        """Update algorithm with fitness results."""
+        # Update NEAT state with fitness scores
         if isinstance(fitness, np.ndarray):
             fitness = jnp.array(fitness)
-
+            
         self.state = self.neat.tell(self.state, fitness)
-
-        # Update best params
+        
+        # Track best performing network
         best_idx = jnp.argmax(fitness)
         if fitness[best_idx] > self.best_fitness:
             self.best_fitness = fitness[best_idx]
-            self._best_idx = best_idx.astype(jnp.int32)
+            self._best_idx = int(best_idx)
 
     @property
     def best_params(self) -> jnp.ndarray:
